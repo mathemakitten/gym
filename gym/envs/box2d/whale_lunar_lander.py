@@ -1,3 +1,10 @@
+"""
+This is an adaptation of the LunarLander gym environment. Instead of landing a spaceship on the moon,
+the agent will try to land a blue whale on the moon.
+
+Happy 50th anniversary of the moon landing!
+"""
+
 import sys, math
 import numpy as np
 
@@ -33,17 +40,20 @@ from gym.utils import seeding, EzPickle
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
 FPS = 50
-SCALE = 30.0  # affects how fast-paced the game is, forces should be adjusted as well
+SCALE = 20.0  # affects how fast-paced the game is, forces should be adjusted as well
 
 MAIN_ENGINE_POWER = 13.0
 SIDE_ENGINE_POWER = 0.6
 
 INITIAL_RANDOM = 1000.0  # Set 1500 to make game harder
 
-LANDER_POLY = [
-    (-14, +17), (-17, 0), (-17, -10),
-    (+17, -10), (+17, 0), (+14, +17)
-]
+# Main body portion - tail is separate
+LANDER_POLY = [(-18, 5), (-13, 10), (-5, 10), (1,1), (1, -10), (-13, -10), (-18, -5)]
+
+# LANDER_POLY = [
+#     (-14, +17), (-17, 0), (-17, -10),
+#     (+17, -10), (+17, 0), (+14, +17)
+# ]
 LEG_AWAY = 20
 LEG_DOWN = 18
 LEG_W, LEG_H = 2, 8
@@ -162,6 +172,7 @@ class WhaleLunarLander(gym.Env, EzPickle):
         self.moon.color2 = (0.0, 0.0, 0.0)
 
         initial_y = VIEWPORT_H / SCALE
+        '''
         self.lander = self.world.CreateDynamicBody(
             position=(VIEWPORT_W / SCALE / 2, initial_y),
             angle=0.0,
@@ -173,8 +184,31 @@ class WhaleLunarLander(gym.Env, EzPickle):
                 maskBits=0x001,  # collide only with ground
                 restitution=0.0)  # 0.99 bouncy
         )
-        self.lander.color1 = (0.5, 0.9, 0.93) # HN: change main body to turquoise
-        self.lander.color2 = (0.3, 0.3, 0.5)
+        '''
+        # TODO HN replace the above with a single body with multiple fixtures instead
+        MIDTAIL_POLY = [(1, -5), (1, -10), (8, -5), (8, -10)]
+        midtail = fixtureDef(shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in MIDTAIL_POLY]))
+        ENDTAIL_POLY = [(8, -5), (8, -10), (11, -10), (15, 0), (17, 5), (10, 5), (10, 0)]
+        endtail = fixtureDef(shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in ENDTAIL_POLY]))
+        FIN1_POLY = [(10, 5), (7, 10), (10, 15), (13, 10), (13, 5)]
+        fin1 = fixtureDef(shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in FIN1_POLY]))
+        FIN2_POLY = [(14, 5), (14, 10), (18, 15), (20, 10), (17, 5)]
+        fin2 = fixtureDef(shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in FIN2_POLY]))
+
+        self.lander = self.world.CreateDynamicBody(
+            position=(VIEWPORT_W / SCALE / 2, initial_y),
+            angle=0.0,
+            fixtures=[fixtureDef(
+                shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in LANDER_POLY]),
+                density=5.0,
+                friction=0.1,
+                categoryBits=0x0010,
+                maskBits=0x001,  # collide only with ground
+                restitution=0.0), midtail, endtail, fin1, fin2]  # 0.99 bouncy
+        )
+        # TODO HN breaking changes here
+        self.lander.color1 = (0.5, 0.8, 0.83)  # HN: change main body to turquoise
+        self.lander.color2 = (0.5, 0.8, 0.99)
         self.lander.ApplyForceToCenter((
             self.np_random.uniform(-INITIAL_RANDOM, INITIAL_RANDOM),
             self.np_random.uniform(-INITIAL_RANDOM, INITIAL_RANDOM)
@@ -184,7 +218,8 @@ class WhaleLunarLander(gym.Env, EzPickle):
         for i in [-1, +1]:
             leg = self.world.CreateDynamicBody(
                 position=(VIEWPORT_W / SCALE / 2 - i * LEG_AWAY / SCALE, initial_y),
-                angle=(i * 0.05),
+                # angle=(i * 0.05),
+                angle=(i * 0.90),
                 fixtures=fixtureDef(
                     shape=polygonShape(box=(LEG_W / SCALE, LEG_H / SCALE)),
                     density=1.0,
@@ -213,7 +248,6 @@ class WhaleLunarLander(gym.Env, EzPickle):
                 rjd.upperAngle = -0.9 + 0.5
             leg.joint = self.world.CreateJoint(rjd)
             self.legs.append(leg)
-
         self.drawlist = [self.lander] + self.legs
 
         return self.step(np.array([0, 0]) if self.continuous else 0)[0]
