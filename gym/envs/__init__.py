@@ -95,6 +95,13 @@ register(
 # ----------------------------------------
 
 register(
+    id='WhaleLunarLander-v0',
+    entry_point='gym.envs.box2d:WhaleLunarLander',
+    max_episode_steps=1000,
+    reward_threshold=200,
+)
+
+register(
     id='LunarLander-v2',
     entry_point='gym.envs.box2d:LunarLander',
     max_episode_steps=1000,
